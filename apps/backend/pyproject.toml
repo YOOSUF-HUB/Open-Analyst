@@ -16,6 +16,9 @@ dependencies = [
     "alembic>=1.14.0",
     "psycopg2-binary>=2.9.10",
     "python-dotenv>=1.0.1",
+    "pandas>=2.2.0",
+    "openpyxl>=3.1.0",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
@@ -41,7 +44,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["E501"]
+ignore = ["E501", "B008"]  # B008: FastAPI Depends/File/Query in defaults is idiomatic
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

@@ -72,6 +72,10 @@ logs/
 # Alembic (keep versions dir but not __pycache__)
 apps/backend/alembic/versions/__pycache__/
 
+# Uploaded datasets (never commit user data)
+apps/backend/uploads/
+uploads/
+
 # Misc
 *.tmp
 *.bak

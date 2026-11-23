@@ -32,10 +32,15 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       BACKEND_RELOAD: ${BACKEND_RELOAD:-true}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-25}
+      MAX_DATASET_ROWS: ${MAX_DATASET_ROWS:-100000}
+      MAX_DATASET_COLUMNS: ${MAX_DATASET_COLUMNS:-200}
+      UPLOAD_DIR: /app/uploads
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - ./apps/backend:/app
+      - dataset_uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,4 +68,6 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  dataset_uploads:
     driver: local
