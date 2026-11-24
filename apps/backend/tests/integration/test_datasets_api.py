@@ -1,4 +1,6 @@
 import io
+import logging
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -203,3 +205,117 @@ def test_delete_dataset(client):
 def test_delete_nonexistent(client):
     resp = client.delete("/api/v1/datasets/00000000-0000-0000-0000-000000000000")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Filename validation
+# ---------------------------------------------------------------------------
+
+
+def test_upload_long_filename_returns_400(client):
+    long_name = "a" * 256 + ".csv"
+    data = make_csv()
+    resp = client.post(
+        "/api/v1/datasets/upload",
+        files={"file": (long_name, io.BytesIO(data), "text/csv")},
+    )
+    assert resp.status_code == 400
+    assert "too long" in resp.json()["detail"].lower()
+
+
+# Null-byte filename: tested at unit level (validate_filename) because HTTP
+# multipart encoding strips null bytes before they reach the application.
+
+# ---------------------------------------------------------------------------
+# Malformed CSV
+# ---------------------------------------------------------------------------
+
+
+def test_upload_malformed_csv_returns_422(client):
+    malformed = b"col1,col2\n1,2\n3,4,extra_field\n"
+    resp = client.post(
+        "/api/v1/datasets/upload",
+        files={"file": ("bad.csv", io.BytesIO(malformed), "text/csv")},
+    )
+    assert resp.status_code == 422
+    assert "parse" in resp.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Profile endpoint on non-XLSX dataset
+# ---------------------------------------------------------------------------
+
+
+def test_profile_csv_dataset_returns_400(client):
+    resp = upload_csv(client)
+    dataset_id = resp.json()["dataset_id"]
+
+    profile_resp = client.post(
+        f"/api/v1/datasets/{dataset_id}/profile",
+        json={"sheet_name": "Sheet1"},
+    )
+    assert profile_resp.status_code == 400
+    assert "excel" in profile_resp.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Profile / preview on non-profiled datasets
+# ---------------------------------------------------------------------------
+
+
+def test_get_profile_not_profiled_returns_400(client):
+    # Upload a multi-sheet XLSX → NEEDS_SHEET_SELECTION (not profiled)
+    sheet_data = {
+        "Alpha": [["x", "y"], [1, 2]],
+        "Beta": [["p", "q"], [3, 4]],
+    }
+    resp = upload_xlsx(client, sheet_data=sheet_data)
+    dataset_id = resp.json()["dataset_id"]
+    assert resp.json()["status"] == "NEEDS_SHEET_SELECTION"
+
+    profile_resp = client.get(f"/api/v1/datasets/{dataset_id}/profile")
+    assert profile_resp.status_code == 400
+
+
+def test_preview_needs_sheet_selection_returns_400(client):
+    sheet_data = {
+        "Alpha": [["x", "y"], [1, 2]],
+        "Beta": [["p", "q"], [3, 4]],
+    }
+    resp = upload_xlsx(client, sheet_data=sheet_data)
+    dataset_id = resp.json()["dataset_id"]
+
+    preview_resp = client.get(f"/api/v1/datasets/{dataset_id}/preview")
+    assert preview_resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Storage cleanup after profiling failure
+# ---------------------------------------------------------------------------
+
+
+def test_file_cleaned_up_after_profiling_failure(client, tmp_upload_dir):
+    # Malformed CSV passes content validators but fails read_csv (extra field)
+    malformed = b"col1,col2\n1,2\n3,4,extra_field\n"
+    resp = client.post(
+        "/api/v1/datasets/upload",
+        files={"file": ("bad.csv", io.BytesIO(malformed), "text/csv")},
+    )
+    assert resp.status_code == 422
+    # Storage directory must be empty — file was cleaned up
+    remaining = list(tmp_upload_dir.iterdir())
+    assert remaining == [], f"Expected no files after failure, found: {remaining}"
+
+
+def test_storage_delete_failure_is_logged(client, caplog):
+    resp = upload_csv(client)
+    dataset_id = resp.json()["dataset_id"]
+
+    with patch("app.api.v1.routes.datasets.get_storage") as mock_get_storage:
+        mock_storage = mock_get_storage.return_value
+        mock_storage.delete.side_effect = OSError("disk error")
+        with caplog.at_level(logging.WARNING, logger="app.api.v1.routes.datasets"):
+            del_resp = client.delete(f"/api/v1/datasets/{dataset_id}")
+
+    assert del_resp.status_code == 200
+    assert "Could not delete file" in caplog.text

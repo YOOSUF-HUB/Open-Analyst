@@ -5,10 +5,40 @@ from app.services.ingestion.validators import (
     validate_extension,
     validate_file_contents,
     validate_file_size,
+    validate_filename,
     validate_xlsx_signature,
 )
 
 XLSX_MAGIC = b"PK\x03\x04" + b"\x00" * 100
+
+
+# ---------------------------------------------------------------------------
+# validate_filename
+# ---------------------------------------------------------------------------
+
+
+def test_filename_valid():
+    validate_filename("my_data.csv")  # should not raise
+
+
+def test_filename_null_byte_raises():
+    with pytest.raises(ValueError, match="invalid characters"):
+        validate_filename("evil\x00file.csv")
+
+
+def test_filename_too_long_raises():
+    with pytest.raises(ValueError, match="too long"):
+        validate_filename("a" * 256 + ".csv")
+
+
+def test_filename_exactly_255_ok():
+    # 251 'a' chars + '.csv' = 255
+    validate_filename("a" * 251 + ".csv")  # should not raise
+
+
+# ---------------------------------------------------------------------------
+# validate_extension
+# ---------------------------------------------------------------------------
 
 
 def test_valid_csv_extension():

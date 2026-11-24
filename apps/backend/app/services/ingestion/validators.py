@@ -3,16 +3,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {".csv", ".xlsx"}
-ALLOWED_CONTENT_TYPES = {
-    "text/csv",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/csv",
-    "text/plain",  # some browsers send CSV as text/plain
-}
 
 # Magic bytes for file type validation
 CSV_PRINTABLE_THRESHOLD = 0.90  # 90% of bytes must be printable ASCII for CSV
 XLSX_MAGIC = b"PK\x03\x04"  # ZIP magic (XLSX is a ZIP archive)
+
+_MAX_FILENAME_LENGTH = 255
+
+
+def validate_filename(filename: str) -> None:
+    """Reject filenames with null bytes or lengths exceeding the DB column limit."""
+    if "\x00" in filename:
+        raise ValueError("Filename contains invalid characters.")
+    if len(filename) > _MAX_FILENAME_LENGTH:
+        raise ValueError(f"Filename is too long (maximum {_MAX_FILENAME_LENGTH} characters).")
 
 
 def validate_extension(filename: str) -> str:

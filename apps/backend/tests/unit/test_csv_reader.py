@@ -60,7 +60,8 @@ def test_duplicate_column_names():
 
 
 def test_empty_rows_dropped():
-    data = _csv("a,b\n1,2\n,,\n3,4\n")
+    # A proper empty row for a 2-column CSV is a single comma (two empty fields)
+    data = _csv("a,b\n1,2\n,\n3,4\n")
     df = read_csv(data, MAX_ROWS, MAX_COLS)
     assert len(df) == 2
 
@@ -83,3 +84,10 @@ def test_invalid_extension_check_is_separate():
     data = _csv("a,b\n1,2\n")
     df = read_csv(data, MAX_ROWS, MAX_COLS)
     assert len(df) == 1
+
+
+def test_malformed_csv_raises():
+    # Row with extra field should be rejected (on_bad_lines="error")
+    data = _csv("col1,col2\n1,2\n3,4,extra_field\n")
+    with pytest.raises(ValueError, match="Could not parse CSV"):
+        read_csv(data, MAX_ROWS, MAX_COLS)

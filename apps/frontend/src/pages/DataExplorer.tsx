@@ -26,6 +26,7 @@ type ExplorerState =
 
 export function DataExplorer() {
   const [state, setState] = useState<ExplorerState>({ phase: "idle" });
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleUploadStart = () => setState({ phase: "uploading" });
 
@@ -66,14 +67,14 @@ export function DataExplorer() {
 
   const handleDelete = async () => {
     if (state.phase !== "ready" && state.phase !== "loading_preview") return;
-    const id =
-      state.phase === "ready" ? state.response.dataset_id : state.response.dataset_id;
+    const id = state.response.dataset_id;
+    setDeleteError(null);
     try {
       await deleteDataset(id);
-    } catch {
-      // best effort
+      setState({ phase: "idle" });
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete dataset.");
     }
-    setState({ phase: "idle" });
   };
 
   // Load preview after profiling
@@ -154,14 +155,25 @@ export function DataExplorer() {
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <DatasetOverview metrics={profile.dataset} filename={response.original_filename} />
-          <button
-            onClick={() => void handleDelete()}
-            aria-label="Delete dataset"
-            className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs text-muted-foreground hover:text-destructive hover:border-destructive transition-colors shrink-0"
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-            Delete
-          </button>
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <button
+              onClick={() => void handleDelete()}
+              aria-label="Delete dataset"
+              className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Delete
+            </button>
+            {deleteError && (
+              <div
+                role="alert"
+                className="flex items-start gap-1.5 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive max-w-xs"
+              >
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Charts row */}

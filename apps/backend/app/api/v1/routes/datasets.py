@@ -27,12 +27,21 @@ from app.services.ingestion.validators import (
     validate_extension,
     validate_file_contents,
     validate_file_size,
+    validate_filename,
 )
 from app.services.profiling.profiler import build_preview, profile_dataframe
 from app.services.storage.local import get_storage
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/datasets", tags=["datasets"])
+
+
+def _delete_storage_file(storage, storage_key: str, dataset_id: uuid.UUID) -> None:
+    """Delete a stored file on a failure path; log instead of raising."""
+    try:
+        storage.delete(storage_key)
+    except Exception:
+        logger.warning("Could not clean up storage file for dataset %s", dataset_id)
 
 
 def _get_dataset_or_404(dataset_id: uuid.UUID, db: Session) -> Dataset:
@@ -52,6 +61,12 @@ async def upload_dataset(
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided.")
+
+    # Filename validation — length and forbidden characters
+    try:
+        validate_filename(file.filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     # Extension validation
     try:
@@ -123,11 +138,13 @@ async def upload_dataset(
         except ValueError as exc:
             dataset.status = DatasetStatus.FAILED
             dataset.error_message = str(exc)
+            _delete_storage_file(storage, storage_key, dataset_id)
             db.commit()
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except Exception as exc:
             dataset.status = DatasetStatus.FAILED
             dataset.error_message = "Profiling failed."
+            _delete_storage_file(storage, storage_key, dataset_id)
             db.commit()
             logger.exception("Unexpected error profiling CSV %s", dataset_id)
             raise HTTPException(status_code=500, detail="Failed to process dataset.") from exc
@@ -138,12 +155,14 @@ async def upload_dataset(
     except ValueError as exc:
         dataset.status = DatasetStatus.FAILED
         dataset.error_message = str(exc)
+        _delete_storage_file(storage, storage_key, dataset_id)
         db.commit()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     if not sheet_names:
         dataset.status = DatasetStatus.FAILED
         dataset.error_message = "Workbook contains no worksheets."
+        _delete_storage_file(storage, storage_key, dataset_id)
         db.commit()
         raise HTTPException(status_code=422, detail="Workbook contains no worksheets.")
 
@@ -176,6 +195,7 @@ async def upload_dataset(
         except ValueError as exc:
             dataset.status = DatasetStatus.FAILED
             dataset.error_message = str(exc)
+            _delete_storage_file(storage, storage_key, dataset_id)
             db.commit()
             raise HTTPException(status_code=422, detail=str(exc)) from exc
     else:

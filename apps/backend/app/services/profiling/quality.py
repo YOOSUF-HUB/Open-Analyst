@@ -17,12 +17,13 @@ HIGH_CARDINALITY_MIN_ROWS = 50  # Only flag if at least 50 rows
 def generate_warnings(
     df: pd.DataFrame,
     column_types: dict[str, str],
+    dup_rows: int,
 ) -> list[QualityWarning]:
     warnings: list[QualityWarning] = []
     total_rows = len(df)
 
-    # Dataset-level: duplicate rows
-    dup_count = int(df.duplicated().sum())
+    # Dataset-level: duplicate rows (count pre-computed by the caller)
+    dup_count = dup_rows
     if dup_count > 0:
         warnings.append(
             QualityWarning(

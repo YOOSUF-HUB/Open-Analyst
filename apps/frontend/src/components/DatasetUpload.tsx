@@ -11,6 +11,7 @@ interface DatasetUploadProps {
 }
 
 const ACCEPTED_EXTENSIONS = [".csv", ".xlsx"];
+// Keep in sync with the backend MAX_UPLOAD_SIZE_MB setting.
 const MAX_SIZE_MB = 25;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 

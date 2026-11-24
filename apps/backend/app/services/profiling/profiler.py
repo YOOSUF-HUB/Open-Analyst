@@ -77,8 +77,8 @@ def profile_dataframe(df: pd.DataFrame, name: str, file_type: str) -> ProfileSum
         except Exception:
             logger.exception("Failed to profile column %r", col)
 
-    # Quality warnings
-    warnings = generate_warnings(df, column_types)
+    # Quality warnings — pass the already-computed dup_rows to avoid a second full scan
+    warnings = generate_warnings(df, column_types, dup_rows)
 
     return ProfileSummary(
         dataset=dataset_metrics,

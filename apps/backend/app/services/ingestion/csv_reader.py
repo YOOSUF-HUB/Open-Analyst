@@ -52,7 +52,7 @@ def read_csv(
             io.StringIO(text),
             sep=delimiter,
             low_memory=False,
-            on_bad_lines="warn",
+            on_bad_lines="error",
         )
     except Exception as exc:
         raise ValueError(f"Could not parse CSV: {exc}") from exc
