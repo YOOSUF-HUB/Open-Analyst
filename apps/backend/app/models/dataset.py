@@ -17,9 +17,7 @@ class DatasetStatus:
 class Dataset(Base):
     __tablename__ = "datasets"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
     storage_filename: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     file_type: Mapped[str] = mapped_column(String(10), nullable=False)
