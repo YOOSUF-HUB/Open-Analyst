@@ -42,6 +42,21 @@ class Settings(BaseSettings):
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
+    # Upload limits
+    max_upload_size_mb: int = Field(default=25)
+    max_dataset_rows: int = Field(default=100_000)
+    max_dataset_columns: int = Field(default=200)
+    upload_dir: str = Field(default="uploads")
+
+    # Preview limits
+    preview_limit_default: int = Field(default=100)
+    preview_limit_max: int = Field(default=500)
+
+    @computed_field
+    @property
+    def max_upload_size_bytes(self) -> int:
+        return self.max_upload_size_mb * 1024 * 1024
+
     @computed_field
     @property
     def cors_origins_list(self) -> list[str]:
