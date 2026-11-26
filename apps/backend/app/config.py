@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     preview_limit_default: int = Field(default=100)
     preview_limit_max: int = Field(default=500)
 
+    # Analysis engine limits
+    max_filter_conditions: int = Field(default=20)
+    max_group_by_columns: int = Field(default=5)
+    max_aggregations_per_request: int = Field(default=20)
+    max_correlation_columns: int = Field(default=50)
+    max_analysis_result_rows: int = Field(default=10_000)
+
     @computed_field
     @property
     def max_upload_size_bytes(self) -> int:

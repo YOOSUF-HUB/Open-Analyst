@@ -5,9 +5,9 @@
 | Phase | Name | Focus | Status |
 |---|---|---|---|
 | 0 | Project Foundation | Infrastructure, CI, health endpoints | Complete |
-| 1 | Data Ingestion | File upload, storage, schema detection | Planned |
-| 2 | Conversational Analysis | LLM integration, sessions, clarification | Planned |
-| 3 | Analytical Engine | EDA, statistics, visualizations | Planned |
+| 1 | Data Ingestion | File upload, storage, schema detection | Complete |
+| 2 | Deterministic Analysis Engine | Filtering, sorting, aggregation, statistics, correlation | In Progress |
+| 3 | Conversational Analysis | LLM integration, sessions, NLP planning | Planned |
 | 4 | Reports and Follow-ups | AI narratives, follow-up questions | Planned |
 | 5 | Advanced Analytics | ML, forecasting, feature analysis | Planned |
 | 6 | Self-Hosted Support | Ollama, full self-hosting | Planned |
@@ -47,9 +47,30 @@ See [phases/PHASE_01.md](phases/PHASE_01.md) for full details.
 
 ---
 
-## Phase 2 — Conversational Analysis
+## Phase 2 — Deterministic Analysis Engine
 
-**Goal:** Introduce the LLM layer. Allow users to describe what they want to understand.
+**Goal:** Build a deterministic, SQL-backed analytical engine. No LLM required.
+Users submit structured JSON requests; the engine executes them against the
+uploaded dataset using DuckDB in-process and persists results in PostgreSQL.
+
+**Deliverables:**
+- Pydantic v2 request/response schemas (discriminated union on `operation`)
+- `analysis_records` PostgreSQL table (JSONB result payload)
+- DuckDB in-process execution engine (filtering, sorting, aggregation, statistics, correlation)
+- Security-first query builder (column allowlist from profile, parameterised values)
+- FastAPI routes nested under `/api/v1/datasets/{dataset_id}/analyses`
+- Frontend analysis panel
+- Documentation updates
+
+See [phases/PHASE_02.md](phases/PHASE_02.md) for full details.
+
+---
+
+## Phase 3 — Conversational Analysis & LLM Integration
+
+**Goal:** Introduce the LLM layer. Allow users to describe analytical objectives
+in natural language and receive AI-generated clarification and planning.
+Builds on the deterministic engine from Phase 2.
 
 **Deliverables:**
 - LLM provider abstraction (OpenAI-compatible API)
@@ -57,21 +78,6 @@ See [phases/PHASE_01.md](phases/PHASE_01.md) for full details.
 - Natural language objective parsing
 - Clarification question generation
 - Session state persistence
-
-See [phases/PHASE_02.md](phases/PHASE_02.md) for full details.
-
----
-
-## Phase 3 — Analytical Engine
-
-**Goal:** Deterministic analysis tools. EDA, statistics, visualizations.
-
-**Deliverables:**
-- DuckDB integration for SQL analytics
-- Pandas/Polars data processing tools
-- EDA: summary statistics, distributions, correlations
-- SciPy/Statsmodels statistical tests
-- Apache ECharts visualizations
 - LangGraph workflow orchestration
 
 See [phases/PHASE_03.md](phases/PHASE_03.md) for full details.

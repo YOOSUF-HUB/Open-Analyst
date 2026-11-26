@@ -100,25 +100,107 @@ API docs are disabled in production (`ENVIRONMENT=production`).
 
 ---
 
-## Future Endpoints (Planned)
+## Phase 1 Endpoints (Implemented)
 
-The following endpoints are planned but not yet implemented.
-Do not implement until the relevant phase begins.
+### POST /api/v1/datasets/upload
 
-### Phase 1 — Data Ingestion
+Upload a CSV or Excel file. Profiles the dataset immediately (CSV and
+single-sheet Excel). Multi-sheet Excel returns `NEEDS_SHEET_SELECTION`.
+
+### POST /api/v1/datasets/{id}/profile
+
+Select a sheet and profile a multi-sheet Excel dataset.
+
+### GET /api/v1/datasets/{id}
+
+Get dataset metadata (status, row/column counts, sheet names, error).
+
+### GET /api/v1/datasets/{id}/profile
+
+Get the full `ProfileSummary` for a profiled dataset.
+
+### GET /api/v1/datasets/{id}/preview
+
+Get a preview of dataset rows (default 100, max 500 via `?limit=`).
+
+### DELETE /api/v1/datasets/{id}
+
+Delete a dataset and its stored file. Cascades to all analysis records.
+
+---
+
+## Phase 2 Endpoints (Planned — Milestone 5)
+
+Analysis requests are nested under their parent dataset. All endpoints
+require the dataset to exist; non-existent `dataset_id` returns 404.
+
+### POST /api/v1/datasets/{dataset_id}/analyses
+
+Submit an analysis request. The request body is a discriminated JSON object
+with an `operation` field that routes to the correct schema.
+
+**Request body** (examples):
+
+```json
+{ "operation": "describe" }
+
+{ "operation": "describe", "columns": ["age", "salary"] }
+
+{
+  "operation": "filter",
+  "conditions": [
+    { "column": "age", "operator": "gte", "value": 18 },
+    { "column": "active", "operator": "eq", "value": true }
+  ]
+}
+
+{
+  "operation": "aggregate",
+  "group_by": ["region"],
+  "aggregations": [
+    { "function": "SUM", "column": "revenue", "alias": "total_revenue" },
+    { "function": "COUNT", "column": "id", "alias": "num_records" }
+  ]
+}
+
+{
+  "operation": "correlate",
+  "columns": ["age", "salary", "tenure"],
+  "method": "pearson"
+}
+```
+
+**Supported operations:** `filter`, `sort`, `aggregate`, `describe`, `correlate`
+
+**Response 201:** `AnalysisRecordResponse`
+
+### GET /api/v1/datasets/{dataset_id}/analyses
+
+List all analysis records for a dataset, most recent first.
+
+**Response 200:** `AnalysisListResponse`
+
+### GET /api/v1/datasets/{dataset_id}/analyses/{record_id}
+
+Get a single analysis record including its result payload.
+
+**Response 200:** `AnalysisRecordResponse`
+
+### DELETE /api/v1/datasets/{dataset_id}/analyses/{record_id}
+
+Delete a single analysis record.
+
+**Response 200:** `{ "message": "Analysis record deleted.", "record_id": "..." }`
+
+---
+
+## Phase 3 Endpoints (Planned)
+
+Conversational analysis sessions (LLM-backed). Phase 3 scope.
 
 ```
-POST /api/v1/datasets          Upload a dataset (CSV/Excel)
-GET  /api/v1/datasets          List uploaded datasets
-GET  /api/v1/datasets/{id}     Get dataset metadata
-DELETE /api/v1/datasets/{id}   Delete a dataset
-```
-
-### Phase 2 — Analysis Sessions
-
-```
-POST /api/v1/sessions          Start an analysis session
-GET  /api/v1/sessions/{id}     Get session status
-POST /api/v1/sessions/{id}/messages  Send a message
-GET  /api/v1/sessions/{id}/results   Get analysis results
+POST /api/v1/sessions                      Create analysis session
+GET  /api/v1/sessions/{id}                 Get session state
+POST /api/v1/sessions/{id}/messages        Send user message
+GET  /api/v1/sessions/{id}/messages        Get message history
 ```
